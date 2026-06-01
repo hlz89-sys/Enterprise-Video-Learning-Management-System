@@ -1,0 +1,52 @@
+version: "3.9"
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: lms-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: enterprise_lms
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  server:
+    build:
+      context: ../server
+    container_name: lms-server
+    restart: always
+    depends_on:
+      - mysql
+    environment:
+      PORT: 4000
+      JWT_SECRET: change_me_please
+      JWT_EXPIRES_IN: 12h
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: 123456
+      DB_NAME: enterprise_lms
+      UPLOAD_DIR: uploads
+      CORS_ORIGIN: http://localhost:8080
+    volumes:
+      - ../server/uploads:/app/uploads
+    ports:
+      - "4000:4000"
+
+  client:
+    build:
+      context: ../client
+      args:
+        VITE_API_BASE: http://localhost:4000/api
+    container_name: lms-client
+    restart: always
+    depends_on:
+      - server
+    ports:
+      - "8080:80"
+
+volumes:
+  mysql_data:
